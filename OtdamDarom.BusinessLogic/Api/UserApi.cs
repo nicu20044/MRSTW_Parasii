@@ -5,75 +5,76 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web;
-using MusicStore.BusinessLogic.Data;
+using OtdamDarom.BusinessLogic.Data;
+using OtdamDarom.BusinessLogic.Dtos;
+using OtdamDarom.Domain.Models;
 
-using MusicStore.BusinessLogic.Services;
-using MusicStore2.Domain.Entities.Product;
-using MusicStore2.Domain.Entities.User;
-
-namespace MusicStore.BusinessLogic.Core
+namespace OtdamDarom.BusinessLogic.Api
 {
     public class UserApi
     {
         private readonly AppDbContext _context = new AppDbContext();
 
 
-        internal async Task<ProductData> GetByIdAsync(int id)
+        public async Task<DealModel> GetDealByIdAsync(int dealId)
         {
-            return await _context.Products.FirstOrDefaultAsync(p => p.Id == id);
+            return await _context.Deals.FirstOrDefaultAsync(p => p.Id == dealId);
         }
 
-
-        internal  IEnumerable<ProductData> GetAllAsync()
+        public async Task<IEnumerable<DealModel>> GetAllDealsAsync()
         {
-            return _context.Products.AsNoTracking().ToList();
+            return await _context.Deals.AsNoTracking().ToListAsync();
         }
 
-        internal Task CreateAsync(ProductData productData)
+        public async Task<int> CreateDealAsync(DealModel dealModel)
         {
-            if (productData == null)
+            if (dealModel == null)
             {
-                throw new ArgumentException("Product cannot be null");
+                throw new ArgumentException("Deal cannot be null");
             }
 
+            _context.Deals.Add(dealModel);
+            await _context.SaveChangesAsync();
 
-            _context.Products.Add(productData);
-            _context.SaveChanges();
-            return Task.CompletedTask;
+            return dealModel.Id;
         }
 
-        internal async Task UpdateProductAsync(ProductData productData)
+        public async Task UpdateDealAsync(DealModel dealModel)
         {
-            if (productData == null)
-                throw new ArgumentException("Produsul nu poate fi null.");
+            if (dealModel == null)
+            {
+                throw new ArgumentException("Deal cannot be found.");
+            }
 
-            var existingProduct = await _context.Products.FirstOrDefaultAsync(u => u.Id == productData.Id);
-            if (existingProduct == null)
-                throw new InvalidOperationException("Utilizatorul nu a fost găsit.");
+            var existingDeal = await _context.Deals.FirstOrDefaultAsync(u => u.Id == dealModel.Id);
 
-            existingProduct.Name = productData.Name;
-            existingProduct.AudioFileUrl = productData.AudioFileUrl;
-            existingProduct.Price = productData.Price;
-            
+            if (existingDeal == null)
+            {
+                throw new InvalidOperationException("Deal cannot be found.");
+            }
 
-            _context.Entry(existingProduct).State = EntityState.Modified;
+            existingDeal.Name = dealModel.Name;
+            existingDeal.Description = dealModel.Description;
+
+
+            _context.Entry(existingDeal).State = EntityState.Modified;
             await _context.SaveChangesAsync();
         }
 
-        internal async Task DeleteAsync(int productId)
+        public async Task DeleteDealAsync(int dealId)
         {
-            var entity = await  _context.Products.FirstOrDefaultAsync(p => p.Id == productId);;
-            if (entity == null)
+            var deal = await _context.Deals.FirstOrDefaultAsync(p => p.Id == dealId);
+            ;
+            if (deal == null)
             {
-                throw new ArgumentException("Product not found");
+                throw new ArgumentException("Deal not found");
             }
-        
-            _context.Products.Remove(entity);
-            _context.SaveChanges();
+
+            _context.Deals.Remove(deal);
+            await _context.SaveChangesAsync();
         }
 
-        internal async Task<string> CreateUserSessionAsync(int userId)
+        public async Task<string> CreateUserSessionAsync(int userId)
         {
             var token = Guid.NewGuid().ToString();
 
@@ -82,77 +83,74 @@ namespace MusicStore.BusinessLogic.Core
                 UserId = userId,
                 Token = token,
                 CreatedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddHours(2) // sesiune valabilă 2h
+                ExpiresAt = DateTime.UtcNow.AddHours(2)
             };
 
-            _context.UserSessions.Add(session);
+            _context.Sessions.Add(session);
             await _context.SaveChangesAsync();
 
             return token;
         }
 
-        internal async Task UpdateUserAsync(string email)
+        public async Task UpdateUserAsync(string email)
         {
             if (string.IsNullOrWhiteSpace(email))
+            {
                 throw new ArgumentException("Email cannot be null or empty.", nameof(email));
+            }
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
 
             if (user != null)
             {
-                DateTime newLoginTime = DateTime.UtcNow;
                 string token = Guid.NewGuid().ToString();
-
-                user.LastLoginTime = newLoginTime;
+                
                 user.Token = token;
 
                 _context.Entry(user).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
             }
-            else
-            {
-            }
         }
 
-        internal async Task<UserAuthResp> UserLoginActionAsync(UserLoginData data, string dataEmail)
+        public async Task<UserAuthResponse> LoginUserAsync(UserLoginRequest request, string dataEmail)
         {
-            if (data == null)
+            if (request == null)
             {
-                return new UserAuthResp
+                return new UserAuthResponse
                 {
-                    Status = false,
-                    StatusMsg = "Date de autentificare invalide."
+                    IsSuccess = false,
+                    StatusMessage = "Invalid data."
                 };
             }
 
             try
             {
-                if (string.IsNullOrEmpty(data.Email))
+                if (string.IsNullOrEmpty(request.Email))
                 {
-                    return new UserAuthResp
+                    return new UserAuthResponse
                     {
-                        Status = false,
-                        StatusMsg = "Adresa de email este necesară."
+                        IsSuccess = false,
+                        StatusMessage = "Email is required."
                     };
                 }
 
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dataEmail);
                 if (user == null)
                 {
-                    return new UserAuthResp
+                    return new UserAuthResponse
                     {
-                        Status = false,
-                        StatusMsg = "Utilizator inexistent."
+                        IsSuccess = false,
+                        StatusMessage = "User does not exists."
                     };
                 }
 
-                string hashedPassword = ComputeHash(data.Password);
+                string hashedPassword = ComputeHash(request.Password);
                 if (user.PasswordHash != hashedPassword)
                 {
-                    return new UserAuthResp
+                    return new UserAuthResponse
                     {
-                        Status = false,
-                        StatusMsg = "Utilizator inexistent sau parolă incorectă."
+                        IsSuccess = false,
+                        StatusMessage = "User does not exists or password is incorrect."
                     };
                 }
 
@@ -161,99 +159,96 @@ namespace MusicStore.BusinessLogic.Core
 
                 user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dataEmail);
 
-                return new UserAuthResp
+                return new UserAuthResponse
                 {
-                    Status = true,
-                    StatusMsg = "Autentificare reușită.",
+                    IsSuccess = true,
+                    StatusMessage = "Authenticated with success.",
                     Id = user.Id,
                     Email = user.Email,
                     UserName = user.Name,
                     UserRole = user.UserRole,
-                    LoginDateTime = user.LastLoginTime,
                     Token = user.Token
                 };
             }
             catch (Exception)
             {
-                return new UserAuthResp
+                return new UserAuthResponse
                 {
-                    Status = false,
-                    StatusMsg = "A apărut o eroare la autentificare. Încercați din nou."
+                    IsSuccess = false,
+                    StatusMessage = "Error."
                 };
             }
         }
 
 
-        internal async Task<UserAuthResp> UserRegisterActionAsync(UserRegData data, string email)
+        public async Task<UserAuthResponse> RegisterUserAsync(UserRegisterRequest request, string email)
         {
-            if (data == null)
+            if (request == null)
             {
-                return new UserAuthResp
+                return new UserAuthResponse
                 {
-                    Status = false,
-                    StatusMsg = "Date de înregistrare invalide."
+                    IsSuccess = false,
+                    StatusMessage = "Invalid data."
                 };
             }
 
             try
             {
-                if (string.IsNullOrEmpty(data.Email) || string.IsNullOrEmpty(data.Password) ||
-                    string.IsNullOrEmpty(data.Name) || string.IsNullOrEmpty(data.UserRole))
+                if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password) ||
+                    string.IsNullOrEmpty(request.Name) || string.IsNullOrEmpty(request.UserRole))
                 {
-                    return new UserAuthResp
+                    return new UserAuthResponse
                     {
-                        Status = false,
-                        StatusMsg = "Toate câmpurile sunt obligatorii."
+                        IsSuccess = false,
+                        StatusMessage = "All properties are required."
                     };
                 }
 
                 var existingUser = _context.Users.FirstOrDefault(u => u.Email == email);
                 if (existingUser != null)
                 {
-                    return new UserAuthResp
+                    return new UserAuthResponse
                     {
-                        Status = false,
-                        StatusMsg = "Această adresă de email este deja asociată unui cont."
+                        IsSuccess = false,
+                        StatusMessage = "This email is already existing."
                     };
                 }
 
-                string hashedPassword = ComputeHash(data.Password);
+                string hashedPassword = ComputeHash(request.Password);
 
-                var newUser = new AppUser
+                var newUser = new UserModel
                 {
-                    Email = data.Email,
-                    Name = data.Name,
+                    Email = request.Email,
+                    Name = request.Name,
                     PasswordHash = hashedPassword,
-                    UserRole = data.UserRole,
-                    LastLoginTime = DateTime.Now,
+                    UserRole = request.UserRole,
                     Token = Guid.NewGuid().ToString()
                 };
 
                 _context.Users.Add(newUser);
                 await _context.SaveChangesAsync();
 
-                return new UserAuthResp
+                return new UserAuthResponse
                 {
-                    Status = true,
-                    StatusMsg = "Cont creat cu succes!",
+                    IsSuccess = true,
+                    StatusMessage = "Success!",
                     Email = newUser.Email,
                     UserName = newUser.Name,
                     UserRole = newUser.UserRole,
-                    LoginDateTime = newUser.LastLoginTime,
                     Token = newUser.Token
                 };
             }
             catch (Exception ex)
             {
-                return new UserAuthResp
+                return new UserAuthResponse
                 {
-                    Status = false,
-                    StatusMsg = "A apărut o eroare la crearea contului. Încercați din nou."
+                    IsSuccess = false,
+                    StatusMessage = $"Error: {ex.Message}"
                 };
             }
         }
 
-        public static string ComputeHash(string password)
+        private static string ComputeHash(string password)
         {
             using (var sha256 = SHA256.Create())
             {
@@ -261,11 +256,6 @@ namespace MusicStore.BusinessLogic.Core
                 var hash = sha256.ComputeHash(bytes);
                 return Convert.ToBase64String(hash);
             }
-        }
-
-        internal void SaveChanges()
-        {
-            _context.SaveChanges();
         }
     }
 }
