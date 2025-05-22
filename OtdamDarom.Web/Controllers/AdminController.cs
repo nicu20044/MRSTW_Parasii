@@ -1,8 +1,12 @@
-﻿using System.Linq;
+﻿using System;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Mvc;
 using AutoMapper;
 using OtdamDarom.BusinessLogic.Interfaces;
+using OtdamDarom.BusinessLogic.Services;
 using OtdamDarom.Domain.Models;
 using OtdamDarom.Web.Requests;
 
@@ -10,16 +14,23 @@ namespace OtdamDarom.Web.Controllers
 {
     public class AdminController : Controller
     {
-        private readonly IUser _user = BusinessLogic.BusinessLogic.GetUserBl();
+        private readonly IUser _user;
+
+        public AdminController()
+        {
+            var bl = new BusinessLogic.BusinessLogic();
+            _user = bl.GetUserBl();
+        }
 
         public async Task<ActionResult> Index()
         {
             var users = await _user.GetAllUsersAsync();
             var userDtos = users.Select(Mapper.Map<UserResponse>).ToList();
+            
             return View(userDtos);
         }
 
-        public async Task<ActionResult> Details(int id)
+        public async Task<ActionResult> UserDetails(int id)
         {
             var user = await _user.GetUserByIdAsync(id);
             if (user == null)
@@ -31,14 +42,14 @@ namespace OtdamDarom.Web.Controllers
             return View(dto);
         }
 
-        public ActionResult Create()
+        public ActionResult CreateUser()
         {
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<ActionResult> Create(CreateUserRequest request)
+        public async Task<ActionResult> CreateUser(CreateUserRequest request)
         {
             if (!ModelState.IsValid)
             {
@@ -50,7 +61,7 @@ namespace OtdamDarom.Web.Controllers
             return RedirectToAction("Index");
         }
 
-        public async Task<ActionResult> Edit(int id)
+        public async Task<ActionResult> EditUser(int id)
         {
             var user = await _user.GetUserByIdAsync(id);
             if (user == null)
@@ -64,7 +75,7 @@ namespace OtdamDarom.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<ActionResult> Edit(int id, UpdateUserRequest request)
+        public async Task<ActionResult> EditUser(int id, UpdateUserRequest request)
         {
             if (!ModelState.IsValid)
             {
@@ -84,19 +95,7 @@ namespace OtdamDarom.Web.Controllers
             return RedirectToAction("Index");
         }
 
-        public async Task<ActionResult> Delete(int id)
-        {
-            var user = await _user.GetUserByIdAsync(id);
-            if (user == null)
-            {
-                return HttpNotFound();
-            }
-
-            var dto = Mapper.Map<UserResponse>(user);
-            return View(dto);
-        }
-
-        [HttpPost, ActionName("Delete")]
+        [HttpPost, ActionName("DeleteUser")]
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> DeleteConfirmed(int id)
         {
@@ -113,6 +112,44 @@ namespace OtdamDarom.Web.Controllers
 
             await _user.UpdateUserRoleAsync(email, newRole);
             return RedirectToAction("Index");
+        }
+
+        public ActionResult Dashboard()
+        {
+            return View();
+        }
+
+        public async Task<ActionResult> ManageUsers()
+        {
+            var users = await _user.GetAllUsersAsync();
+            return View(users);
+        }
+
+        public ActionResult AddUser()
+        {
+            return View();
+        }
+
+
+        [HttpPost]
+        public async Task<ActionResult> DeleteUser(int id)
+        {
+            await _user.DeleteUserAsync(id);
+            return RedirectToAction("ManageUsers");
+        }
+
+        [HttpPost]
+        public async Task<ActionResult> UpdateUserRole(int id, string role)
+        {
+            var user = await _user.GetUserByIdAsync(id);
+            if (user != null)
+            {
+                user.UserRole = role;
+                await _user.UpdateUserRoleAsync(user.Email, role);
+                return Json(new { success = true });
+            }
+
+            return Json(new { success = false });
         }
     }
 }

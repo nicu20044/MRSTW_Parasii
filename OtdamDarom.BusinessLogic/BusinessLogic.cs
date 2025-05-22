@@ -3,34 +3,34 @@ using OtdamDarom.BusinessLogic.Services;
 
 namespace OtdamDarom.BusinessLogic
 {
-    public static class BusinessLogic
+    public class BusinessLogic
     {
-        public static IAuth GetAuthBl()
+        public IAuth GetAuthBL()
         {
             return new AuthService();
         }
 
-        public static ICategory GetCategoryBl()
+        public ICategory GetCategoryBL()
         {
             return new CategoryService();
         }
 
-        public static IDeal GetDealBl()
+        public IDeal GetDealBL()
         {
             return new DealService();
         }
 
-        public static ISession GetSessionBl()
+        public ISession GetSessionBL()
         {
             return new SessionService();
         }
 
-        public static ISubcategory GetSubcategoryBl()
+        public ISubcategory GetSubcategoryBL()
         {
             return new SubcategoryService();
         }
 
-        public static IUser GetUserBl()
+        public IUser GetUserBl()
         {
             return new UserService();
         }

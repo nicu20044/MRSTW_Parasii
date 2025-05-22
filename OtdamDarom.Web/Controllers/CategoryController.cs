@@ -10,7 +10,13 @@ namespace OtdamDarom.Web.Controllers
 {
     public class CategoryController : Controller
     {
-        private readonly ICategory _category = BusinessLogic.BusinessLogic.GetCategoryBl();
+        private readonly ICategory _category;
+
+        public CategoryController()
+        {
+            var bl = new BusinessLogic.BusinessLogic();
+            _category = bl.GetCategoryBL();
+        }
 
         public async Task<ActionResult> Index()
         {
@@ -22,7 +28,10 @@ namespace OtdamDarom.Web.Controllers
         public async Task<ActionResult> Details(int id)
         {
             var category = await _category.GetCategoryByIdAsync(id);
-            if (category == null) return HttpNotFound();
+            if (category == null)
+            {
+                return HttpNotFound();
+            }
 
             var dto = Mapper.Map<CategoryResponse>(category);
             return View(dto);
@@ -37,8 +46,6 @@ namespace OtdamDarom.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> Create(CreateCategoryRequest request)
         {
-            if (!ModelState.IsValid) return View(request);
-
             var category = Mapper.Map<CategoryModel>(request);
             await _category.CreateCategoryAsync(category);
             return RedirectToAction("Index");
@@ -47,7 +54,10 @@ namespace OtdamDarom.Web.Controllers
         public async Task<ActionResult> Edit(int id)
         {
             var category = await _category.GetCategoryByIdAsync(id);
-            if (category == null) return HttpNotFound();
+            if (category == null)
+            {
+                return HttpNotFound();
+            }
 
             var dto = new UpdateCategoryRequest { Name = category.Name };
             return View(dto);
@@ -60,9 +70,12 @@ namespace OtdamDarom.Web.Controllers
             if (!ModelState.IsValid) return View(request);
 
             var existing = await _category.GetCategoryByIdAsync(id);
-            if (existing == null) return HttpNotFound();
+            if (existing == null)
+            {
+                return HttpNotFound();
+            }
 
-            existing.Name = request.Name; // Only update Name
+            existing.Name = request.Name;
             await _category.UpdateCategoryAsync(existing);
             return RedirectToAction("Index");
         }
@@ -70,7 +83,10 @@ namespace OtdamDarom.Web.Controllers
         public async Task<ActionResult> Delete(int id)
         {
             var category = await _category.GetCategoryByIdAsync(id);
-            if (category == null) return HttpNotFound();
+            if (category == null)
+            {
+                return HttpNotFound();
+            }
 
             var dto = Mapper.Map<CategoryResponse>(category);
             return View(dto);

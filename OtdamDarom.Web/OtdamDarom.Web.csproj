@@ -115,7 +115,11 @@
         <Compile Include="App_Start\FilterConfig.cs" />
         <Compile Include="App_Start\RouteConfig.cs" />
         <Compile Include="Controllers\AdminController.cs" />
+        <Compile Include="Controllers\AuthController.cs" />
         <Compile Include="Controllers\CategoryController.cs" />
+        <Compile Include="Controllers\DealController.cs" />
+        <Compile Include="Controllers\HomeController.cs" />
+        <Compile Include="Controllers\SubcategoryController.cs" />
         <Compile Include="Global.asax.cs">
             <DependentUpon>Global.asax</DependentUpon>
         </Compile>
@@ -128,6 +132,7 @@
         <Compile Include="Requests\DealResponse.cs" />
         <Compile Include="Requests\SubcategoryResponse.cs" />
         <Compile Include="Requests\UpdateCategoryRequest.cs" />
+        <Compile Include="Requests\UpdateDealRequest.cs" />
         <Compile Include="Requests\UpdateSubcategoryRequest.cs" />
         <Compile Include="Requests\UpdateUserRequest.cs" />
         <Compile Include="Requests\UserResponse.cs" />
